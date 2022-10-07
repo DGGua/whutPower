@@ -144,6 +144,7 @@ const CHAR_SET = [
 
 export function charDistinguish(numImg: Jimp) {
   // cnt 9 * 12 = 108
+  let cmpResult: number[] = [];
   for (let index = 0; index < CHAR_SET.length; index++) {
     const map = CHAR_SET[index];
     let cnt = 0;
@@ -161,10 +162,7 @@ export function charDistinguish(numImg: Jimp) {
         }
       }
     }
-    if (cnt > 95) {
-      return index;
-    }
+    cmpResult.push(cnt);
   }
-  return -1;
-
+  return cmpResult.indexOf(Math.max(...cmpResult));
 }
