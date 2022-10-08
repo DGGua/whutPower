@@ -6,7 +6,7 @@ import "fs";
 import { writeFileSync } from "fs";
 import { WebSocket } from "ws";
 import * as config from "./config.json";
-import { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 const axios = require("axios");
 const { wsUrl, whutAuth, masterqq, selfqq, meterId } = config;
 const { nickName, password } = whutAuth;
@@ -190,7 +190,7 @@ socket.on("message", (message) => {
   if (event === "message.private") {
     const { user_id, raw_message } = data;
     if (user_id == masterqq && raw_message == "电费") {
-      const time = new Dayjs();
+      const time = dayjs();
       if (
         (time.hour() == 23 && time.minute() > 20) ||
         (time.hour() == 0 && time.minute() < 10)
@@ -241,7 +241,7 @@ socket.on("message", (message) => {
       message[1].type === "text" &&
       message[1].text.trim() === "电费"
     ) {
-      const time = new Dayjs();
+      const time = dayjs();
       if (
         (time.hour() == 23 && time.minute() > 20) ||
         (time.hour() == 0 && time.minute() < 10)
