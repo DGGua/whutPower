@@ -12,8 +12,10 @@ const { nickName, password } = whutAuth;
 let cookie = "";
 let list = {};
 
-async function req() {
-  return new Promise<Buffer>((res) => {
+async function req(countdown: number = 10) {
+  if (countdown <= 0) return Promise.reject("请求失败，请重试");
+  return new Promise<Buffer>((resolve, reject) => {
+    console.log("hi");
     request("http://cwsf.whut.edu.cn/authImage")
       .on("response", (resp) => {
         console.log(resp.headers["set-cookie"]);
@@ -21,7 +23,14 @@ async function req() {
         console.log(cookie);
       })
       .on("data", (data) => {
-        res(Buffer.from(data));
+        if (data.toString("hex").endsWith("ffd9")) {
+          resolve(Buffer.from(data));
+        } else {
+          console.log("fail   ");
+          req(countdown - 1)
+            .then((data) => resolve(data))
+            .catch((reason) => reject(reason));
+        }
       });
   });
 }
@@ -180,18 +189,30 @@ socket.on("message", (message) => {
   if (event === "message.private") {
     const { user_id, raw_message } = data;
     if (user_id == masterqq && raw_message == "电费") {
-      run().then((data) => {
-        const { remainPower, meterOverdue } = data;
-        socket.send(
-          JSON.stringify({
-            event: "sendPrivateMsg",
-            data: {
-              userId: masterqq,
-              message: `还有${remainPower}度，${meterOverdue}元`,
-            },
-          })
-        );
-      });
+      run()
+        .then((data) => {
+          const { remainPower, meterOverdue } = data;
+          socket.send(
+            JSON.stringify({
+              event: "sendPrivateMsg",
+              data: {
+                userId: masterqq,
+                message: `还有${remainPower}度，${meterOverdue}元`,
+              },
+            })
+          );
+        })
+        .catch((e) => {
+          socket.send(
+            JSON.stringify({
+              event: "sendPrivateMsg",
+              data: {
+                userId: masterqq,
+                message: e,
+              },
+            })
+          );
+        });
     }
   }
   if (event === "message.group") {
@@ -203,18 +224,30 @@ socket.on("message", (message) => {
       message[1].type === "text" &&
       message[1].text.trim() === "电费"
     ) {
-      run().then((data) => {
-        const { remainPower, meterOverdue } = data;
-        socket.send(
-          JSON.stringify({
-            event: "sendGroupMsg",
-            data: {
-              groupId: group_id,
-              message: `还有${remainPower}度，${meterOverdue}元`,
-            },
-          })
-        );
-      });
+      run()
+        .then((data) => {
+          const { remainPower, meterOverdue } = data;
+          socket.send(
+            JSON.stringify({
+              event: "sendGroupMsg",
+              data: {
+                groupId: group_id,
+                message: `还有${remainPower}度，${meterOverdue}元`,
+              },
+            })
+          );
+        })
+        .catch((e) => {
+          socket.send(
+            JSON.stringify({
+              event: "sendGroupMsg",
+              data: {
+                groupId: group_id,
+                message: e.toString(),
+              },
+            })
+          );
+        });
     }
   }
 });
