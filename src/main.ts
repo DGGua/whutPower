@@ -1,14 +1,17 @@
 import request = require("request");
 import * as Jimp from "jimp";
 import { charDistinguish } from "./numberIdentify";
-import axios from "axios";
 import FormData = require("form-data");
 import "fs";
 import { writeFileSync } from "fs";
-const nickName = "";
-const password = "";
+import { WebSocket } from "ws";
+import * as config from "./config.json";
+const axios = require("axios");
+const { wsUrl, whutAuth, masterqq, selfqq, meterId } = config;
+const { nickName, password } = whutAuth;
 let cookie = "";
 let list = {};
+
 async function req() {
   return new Promise<Buffer>((res) => {
     request("http://cwsf.whut.edu.cn/authImage")
@@ -47,13 +50,16 @@ async function login(code: string) {
 
 async function getPower() {
   const form = new FormData();
-  form.append("meterId", "0311.008847.1");
+  form.append("meterId", meterId);
   form.append("factorycode", "E035");
-  axios
-    .post("http://cwsf.whut.edu.cn/queryReserve", form, {
+  const { data } = await axios.post(
+    "http://cwsf.whut.edu.cn/queryReserve",
+    form,
+    {
       headers: { Cookie: cookie },
-    })
-    .then((val) => console.log(val.data));
+    }
+  );
+  return data;
 }
 
 const arr: Array<{ url: string; data: FormData; res: (value: any) => void }> =
@@ -68,7 +74,7 @@ async function reduce() {
       })
     );
   }
-  setTimeout(reduce, 100);
+  setTimeout(reduce, 50);
 }
 
 async function gendata() {
@@ -151,8 +157,64 @@ async function gendata() {
 async function run() {
   const code = await getCode();
   await login(code);
-  await gendata();
-  await getPower();
+  //   await gendata();
+  return await getPower();
 }
-
-run();
+// run();
+const socket = new WebSocket(wsUrl);
+socket.once("open", () =>
+  socket.send(
+    JSON.stringify({
+      event: "sendPrivateMsg",
+      data: {
+        userId: masterqq.toString(),
+        message: "电费 online",
+      },
+    })
+  )
+);
+socket.on("message", (message) => {
+  const obj = JSON.parse(message.toString());
+  const { event, data } = obj;
+  console.log(data);
+  if (event === "message.private") {
+    const { user_id, raw_message } = data;
+    if (user_id == masterqq && raw_message == "电费") {
+      run().then((data) => {
+        const { remainPower, meterOverdue } = data;
+        socket.send(
+          JSON.stringify({
+            event: "sendPrivateMsg",
+            data: {
+              userId: masterqq,
+              message: `还有${remainPower}度，${meterOverdue}元`,
+            },
+          })
+        );
+      });
+    }
+  }
+  if (event === "message.group") {
+    const { group_id, message } = data;
+    if (
+      message.length > 1 &&
+      message[0].type === "at" &&
+      message[0].qq === selfqq &&
+      message[1].type === "text" &&
+      message[1].text.trim() === "电费"
+    ) {
+      run().then((data) => {
+        const { remainPower, meterOverdue } = data;
+        socket.send(
+          JSON.stringify({
+            event: "sendGroupMsg",
+            data: {
+              groupId: group_id,
+              message: `还有${remainPower}度，${meterOverdue}元`,
+            },
+          })
+        );
+      });
+    }
+  }
+});

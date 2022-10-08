@@ -1,3 +1,5 @@
 node_modules
 src/MNIST
 dist
+src/config.json
+yarn-error.log

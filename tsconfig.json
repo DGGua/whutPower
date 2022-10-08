@@ -3,9 +3,10 @@
     "module": "commonjs",
     "target": "es5",
     "noImplicitAny": true,
-    "outDir": "./dist",
+    "outDir": "build",
     "sourceMap": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "resolveJsonModule": true
   },
   "include": ["src/**/*"]
 }
