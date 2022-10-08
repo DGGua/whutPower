@@ -6,6 +6,7 @@ import "fs";
 import { writeFileSync } from "fs";
 import { WebSocket } from "ws";
 import * as config from "./config.json";
+import { Dayjs } from "dayjs";
 const axios = require("axios");
 const { wsUrl, whutAuth, masterqq, selfqq, meterId } = config;
 const { nickName, password } = whutAuth;
@@ -189,30 +190,46 @@ socket.on("message", (message) => {
   if (event === "message.private") {
     const { user_id, raw_message } = data;
     if (user_id == masterqq && raw_message == "电费") {
-      run()
-        .then((data) => {
-          const { remainPower, meterOverdue } = data;
-          socket.send(
-            JSON.stringify({
-              event: "sendPrivateMsg",
-              data: {
-                userId: masterqq,
-                message: `还有${remainPower}度，${meterOverdue}元`,
-              },
-            })
-          );
-        })
-        .catch((e) => {
-          socket.send(
-            JSON.stringify({
-              event: "sendPrivateMsg",
-              data: {
-                userId: masterqq,
-                message: e,
-              },
-            })
-          );
-        });
+      const time = new Dayjs();
+      if (
+        (time.hour() == 23 && time.minute() > 20) ||
+        (time.hour() == 0 && time.minute() < 10)
+      ) {
+        socket.send(
+          JSON.stringify({
+            event: "sendGroupMsg",
+            data: {
+              userId: user_id,
+              message: `系统开放时间早00:10到23:20`,
+            },
+          })
+        );
+      } else {
+        run()
+          .then((data) => {
+            const { remainPower, meterOverdue } = data;
+            socket.send(
+              JSON.stringify({
+                event: "sendPrivateMsg",
+                data: {
+                  userId: masterqq,
+                  message: `还有${remainPower}度，${meterOverdue}元`,
+                },
+              })
+            );
+          })
+          .catch((e) => {
+            socket.send(
+              JSON.stringify({
+                event: "sendPrivateMsg",
+                data: {
+                  userId: masterqq,
+                  message: e,
+                },
+              })
+            );
+          });
+      }
     }
   }
   if (event === "message.group") {
@@ -224,30 +241,46 @@ socket.on("message", (message) => {
       message[1].type === "text" &&
       message[1].text.trim() === "电费"
     ) {
-      run()
-        .then((data) => {
-          const { remainPower, meterOverdue } = data;
-          socket.send(
-            JSON.stringify({
-              event: "sendGroupMsg",
-              data: {
-                groupId: group_id,
-                message: `还有${remainPower}度，${meterOverdue}元`,
-              },
-            })
-          );
-        })
-        .catch((e) => {
-          socket.send(
-            JSON.stringify({
-              event: "sendGroupMsg",
-              data: {
-                groupId: group_id,
-                message: e.toString(),
-              },
-            })
-          );
-        });
+      const time = new Dayjs();
+      if (
+        (time.hour() == 23 && time.minute() > 20) ||
+        (time.hour() == 0 && time.minute() < 10)
+      ) {
+        socket.send(
+          JSON.stringify({
+            event: "sendGroupMsg",
+            data: {
+              groupId: group_id,
+              message: `系统开放时间早00:10到23:20`,
+            },
+          })
+        );
+      } else {
+        run()
+          .then((data) => {
+            const { remainPower, meterOverdue } = data;
+            socket.send(
+              JSON.stringify({
+                event: "sendGroupMsg",
+                data: {
+                  groupId: group_id,
+                  message: `还有${remainPower}度，${meterOverdue}元`,
+                },
+              })
+            );
+          })
+          .catch((e) => {
+            socket.send(
+              JSON.stringify({
+                event: "sendGroupMsg",
+                data: {
+                  groupId: group_id,
+                  message: e.toString(),
+                },
+              })
+            );
+          });
+      }
     }
   }
 });
