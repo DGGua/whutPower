@@ -3,10 +3,9 @@ import * as Jimp from "jimp";
 import { charDistinguish } from "./numberIdentify";
 import FormData = require("form-data");
 import "fs";
-import { writeFileSync } from "fs";
-import { WebSocket } from "ws";
 import * as config from "./config.json";
 import dayjs from "dayjs";
+import bot from "./bot/bot";
 const axios = require("axios");
 const { wsUrl, whutAuth, masterqq, selfqq, meterId } = config;
 const { nickName, password } = whutAuth;
@@ -86,84 +85,6 @@ async function reduce() {
   }
   setTimeout(reduce, 50);
 }
-
-async function gendata() {
-  reduce();
-  function axiospost(url: string, data: FormData) {
-    return new Promise<any>((resolve) => {
-      arr.push({ url, data, res: resolve });
-    });
-  }
-  let powerInfo: Record<string, any> = {};
-  const form = new FormData();
-
-  form.append("factorycode", "E035");
-  const { data } = await axiospost("http://cwsf.whut.edu.cn/getAreaInfo", form);
-  for (const str of (data.areaList as string[]).slice(0, 4)) {
-    const [ariaid, ariaName] = str.split("@");
-    let ariaInfo: { code: string; builds: Record<string, any> } = {
-      code: ariaid,
-      builds: {},
-    };
-
-    const form = new FormData();
-    form.append("factorycode", "E035");
-    form.append("areaid", ariaid);
-    const { data } = await axiospost(
-      "http://cwsf.whut.edu.cn/queryBuildList",
-      form
-    );
-    for (const str of data.buildList as string[]) {
-      const [buildid, buildName] = str.split("@");
-      let buildInfo: { code: string; floors: Record<number, any> } = {
-        code: buildid,
-        floors: {},
-      };
-      const form = new FormData();
-      form.append("factorycode", "E035");
-      form.append("areaid", ariaid);
-
-      form.append("buildid", buildid);
-      const { data } = await axiospost(
-        "http://cwsf.whut.edu.cn/queryFloorList",
-        form
-      );
-      for (const num of data.floorList as number[]) {
-        let floorInfo: { code: number; rooms: Record<string, any> } = {
-          code: num,
-          rooms: {},
-        };
-        const form = new FormData();
-        form.append("factorycode", "E035");
-        form.append("buildid", buildid);
-        form.append("floorid", num);
-        const { data } = await axiospost(
-          "http://cwsf.whut.edu.cn/getRoomInfo",
-          form
-        );
-        for (const str of data.roomList as string[]) {
-          const [roomId, des] = str.split("@");
-          const form = new FormData();
-          form.append("factorycode", "E035");
-          form.append("roomid", roomId);
-          const { data } = await axiospost(
-            "http://cwsf.whut.edu.cn/queryRoomElec",
-            form
-          );
-          floorInfo.rooms[des] = { roomId, meter: data.meterId };
-        }
-        buildInfo.floors[num] = floorInfo;
-        console.log(floorInfo);
-      }
-      console.log(buildInfo);
-      ariaInfo.builds[buildName] = buildInfo;
-    }
-    console.log(ariaInfo);
-    powerInfo[ariaName] = ariaInfo;
-  }
-  console.log(powerInfo);
-  writeFileSync("buf.json", JSON.stringify(powerInfo));
-}
 async function run() {
   const code = await getCode();
   await login(code);
@@ -171,65 +92,47 @@ async function run() {
   return await getPower();
 }
 // run();
-const socket = new WebSocket(wsUrl);
-socket.once("open", () =>
-  socket.send(
-    JSON.stringify({
-      event: "sendPrivateMsg",
-      data: {
-        userId: masterqq.toString(),
-        message: "电费 online",
-      },
-    })
-  )
-);
-socket.on("message", (message) => {
+
+async function requestAnswer(retType: "private" | "group", retId: number) {
+  function sendMessage(msg: string) {
+    bot.send(
+      JSON.stringify({
+        event: retType == "group" ? "sendGroupMsg" : "sendPrivateMsg",
+        data: {
+          // TODO: 耦合
+          userId: retId,
+          groupId: retId,
+          message: msg,
+        },
+      })
+    );
+  }
+  // jwc 下班时间
+  const time = dayjs();
+  if (
+    (time.hour() == 23 && time.minute() > 20) ||
+    (time.hour() == 0 && time.minute() < 10)
+  ) {
+    sendMessage(`系统开放时间早00:10到23:20`);
+  } else {
+    run()
+      .then((data) => {
+        const { remainPower, meterOverdue } = data;
+        sendMessage(`还有${remainPower}度，${meterOverdue}元`);
+      })
+      .catch((e) => {
+        sendMessage(e.toString());
+      });
+  }
+}
+
+bot.on("message", (message) => {
   const obj = JSON.parse(message.toString());
   const { event, data } = obj;
-  console.log(data);
   if (event === "message.private") {
     const { user_id, raw_message } = data;
     if (user_id == masterqq && raw_message == "电费") {
-      const time = dayjs();
-      if (
-        (time.hour() == 23 && time.minute() > 20) ||
-        (time.hour() == 0 && time.minute() < 10)
-      ) {
-        socket.send(
-          JSON.stringify({
-            event: "sendGroupMsg",
-            data: {
-              userId: user_id,
-              message: `系统开放时间早00:10到23:20`,
-            },
-          })
-        );
-      } else {
-        run()
-          .then((data) => {
-            const { remainPower, meterOverdue } = data;
-            socket.send(
-              JSON.stringify({
-                event: "sendPrivateMsg",
-                data: {
-                  userId: masterqq,
-                  message: `还有${remainPower}度，${meterOverdue}元`,
-                },
-              })
-            );
-          })
-          .catch((e) => {
-            socket.send(
-              JSON.stringify({
-                event: "sendPrivateMsg",
-                data: {
-                  userId: masterqq,
-                  message: e,
-                },
-              })
-            );
-          });
-      }
+      requestAnswer("private", user_id);
     }
   }
   if (event === "message.group") {
@@ -241,46 +144,7 @@ socket.on("message", (message) => {
       message[1].type === "text" &&
       message[1].text.trim() === "电费"
     ) {
-      const time = dayjs();
-      if (
-        (time.hour() == 23 && time.minute() > 20) ||
-        (time.hour() == 0 && time.minute() < 10)
-      ) {
-        socket.send(
-          JSON.stringify({
-            event: "sendGroupMsg",
-            data: {
-              groupId: group_id,
-              message: `系统开放时间早00:10到23:20`,
-            },
-          })
-        );
-      } else {
-        run()
-          .then((data) => {
-            const { remainPower, meterOverdue } = data;
-            socket.send(
-              JSON.stringify({
-                event: "sendGroupMsg",
-                data: {
-                  groupId: group_id,
-                  message: `还有${remainPower}度，${meterOverdue}元`,
-                },
-              })
-            );
-          })
-          .catch((e) => {
-            socket.send(
-              JSON.stringify({
-                event: "sendGroupMsg",
-                data: {
-                  groupId: group_id,
-                  message: e.toString(),
-                },
-              })
-            );
-          });
-      }
+      requestAnswer("group", group_id);
     }
   }
 });
