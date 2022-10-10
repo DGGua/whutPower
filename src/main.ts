@@ -1,11 +1,11 @@
 import request = require("request");
 import * as Jimp from "jimp";
 import { charDistinguish } from "./numberIdentify";
-import FormData = require("form-data");
 import "fs";
 import * as config from "./config.json";
 import dayjs from "dayjs";
 import bot from "./bot/bot";
+import { generateForm } from "./utils";
 const axios = require("axios");
 const { whutAuth, masterqq, selfqq, meterId } = config;
 const { nickName, password } = whutAuth;
@@ -67,6 +67,7 @@ async function getPower() {
 }
 
 async function requestAnswer(retType: "private" | "group", retId: number) {
+  console.log(`recieved query from ${retType} ${retId}`);
   function sendMessage(msg: string) {
     bot.send(
       JSON.stringify({
@@ -95,6 +96,7 @@ async function requestAnswer(retType: "private" | "group", retId: number) {
       const { remainPower, meterOverdue } = data;
       sendMessage(`还有${remainPower}度，${meterOverdue}元`);
     } catch (e) {
+      console.log(`error with message ${e.toString()}`);
       sendMessage(e.toString());
     }
   }

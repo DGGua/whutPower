@@ -1,4 +1,6 @@
-function generateForm(obj: Record<string, any>) {
+import FormData from "form-data";
+
+export function generateForm(obj: Record<string, any>) {
   const form = new FormData();
   Object.entries(obj).forEach(([key, value]) => {
     form.append(key, value.toString());

@@ -13,4 +13,5 @@ socket.once("open", () =>
     })
   )
 );
+socket.once("error", (e) => console.log(e));
 export default socket;
