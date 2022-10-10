@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import config from "../config.json";
+import { config } from "../config";
 const { wsUrl, masterqq } = config;
 const socket = new WebSocket(wsUrl);
 socket.once("open", () =>

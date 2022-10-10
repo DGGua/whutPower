@@ -2,7 +2,7 @@ import request = require("request");
 import * as Jimp from "jimp";
 import { charDistinguish } from "./numberIdentify";
 import "fs";
-import * as config from "./config.json";
+import { config } from "./config";
 import bot from "./bot/bot";
 import { generateForm } from "./utils";
 import dayjs from "dayjs";
