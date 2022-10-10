@@ -1,0 +1,8 @@
+version: "3"
+services:
+  bot:
+    build: "."
+    volumes:
+      - /home/ubuntu/.oicq:/app/data
+    network_mode: "host"
+    restart: always
