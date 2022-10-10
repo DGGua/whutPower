@@ -1,3 +1,24 @@
+function generateForm(obj: Record<string, any>) {
+  const form = new FormData();
+  Object.entries(obj).forEach(([key, value]) => {
+    form.append(key, value.toString());
+  });
+  return form;
+}
+// const arr: Array<{ url: string; data: FormData; res: (value: any) => void }> =
+//   [];
+
+// async function reduce() {
+//     if (arr.length > 0) {
+//       const { url, data, res } = arr.pop();
+//       res(
+//         await axios.post(url, data, {
+//           headers: { Cookie: cookie },
+//         })
+//       );
+//     }
+//     setTimeout(reduce, 50);
+//   }
 // async function gendata() {
 //     reduce();
 //     function axiospost(url: string, data: FormData) {
@@ -7,7 +28,7 @@
 //     }
 //     let powerInfo: Record<string, any> = {};
 //     const form = new FormData();
-  
+
 //     form.append("factorycode", "E035");
 //     const { data } = await axiospost("http://cwsf.whut.edu.cn/getAreaInfo", form);
 //     for (const str of (data.areaList as string[]).slice(0, 4)) {
@@ -16,7 +37,7 @@
 //         code: ariaid,
 //         builds: {},
 //       };
-  
+
 //       const form = new FormData();
 //       form.append("factorycode", "E035");
 //       form.append("areaid", ariaid);
@@ -33,7 +54,7 @@
 //         const form = new FormData();
 //         form.append("factorycode", "E035");
 //         form.append("areaid", ariaid);
-  
+
 //         form.append("buildid", buildid);
 //         const { data } = await axiospost(
 //           "http://cwsf.whut.edu.cn/queryFloorList",

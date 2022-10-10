@@ -7,7 +7,7 @@ import * as config from "./config.json";
 import dayjs from "dayjs";
 import bot from "./bot/bot";
 const axios = require("axios");
-const { wsUrl, whutAuth, masterqq, selfqq, meterId } = config;
+const { whutAuth, masterqq, selfqq, meterId } = config;
 const { nickName, password } = whutAuth;
 let cookie = "";
 let list = {};
@@ -26,7 +26,7 @@ async function req(countdown: number = 10) {
         if (data.toString("hex").endsWith("ffd9")) {
           resolve(Buffer.from(data));
         } else {
-          console.log("fail   ");
+          console.log("fail");
           req(countdown - 1)
             .then((data) => resolve(data))
             .catch((reason) => reject(reason));
@@ -42,25 +42,23 @@ async function getCode() {
     const imagec = image.clone();
     ans += charDistinguish(imagec.crop(left, 3, 9, 12));
   });
-  console.log(ans);
   return ans;
 }
 
-async function login(code: string) {
-  const form = new FormData();
-  form.append("logintype", "PLATFORM");
-  form.append("nickName", nickName);
-  form.append("password", password);
-  form.append("checkCode", code);
+async function login(checkCode: string) {
+  const form = generateForm({
+    logintype: "PLATFORM",
+    nickName,
+    password,
+    checkCode,
+  });
   await axios.post("http://cwsf.whut.edu.cn/innerUserLogin", form, {
     headers: { Cookie: cookie },
   });
 }
 
 async function getPower() {
-  const form = new FormData();
-  form.append("meterId", meterId);
-  form.append("factorycode", "E035");
+  const form = generateForm({ meterId, factorycode: "E035" });
   const { data } = await axios.post(
     "http://cwsf.whut.edu.cn/queryReserve",
     form,
@@ -70,28 +68,6 @@ async function getPower() {
   );
   return data;
 }
-
-const arr: Array<{ url: string; data: FormData; res: (value: any) => void }> =
-  [];
-
-async function reduce() {
-  if (arr.length > 0) {
-    const { url, data, res } = arr.pop();
-    res(
-      await axios.post(url, data, {
-        headers: { Cookie: cookie },
-      })
-    );
-  }
-  setTimeout(reduce, 50);
-}
-async function run() {
-  const code = await getCode();
-  await login(code);
-  //   await gendata();
-  return await getPower();
-}
-// run();
 
 async function requestAnswer(retType: "private" | "group", retId: number) {
   function sendMessage(msg: string) {
@@ -113,16 +89,17 @@ async function requestAnswer(retType: "private" | "group", retId: number) {
     (time.hour() == 23 && time.minute() > 20) ||
     (time.hour() == 0 && time.minute() < 10)
   ) {
-    sendMessage(`系统开放时间早00:10到23:20`);
+    sendMessage(`系统开放时间早 00:10 到 23:20`);
   } else {
-    run()
-      .then((data) => {
-        const { remainPower, meterOverdue } = data;
-        sendMessage(`还有${remainPower}度，${meterOverdue}元`);
-      })
-      .catch((e) => {
-        sendMessage(e.toString());
-      });
+    try {
+      const code = await getCode();
+      await login(code);
+      const data = await getPower();
+      const { remainPower, meterOverdue } = data;
+      sendMessage(`还有${remainPower}度，${meterOverdue}元`);
+    } catch (e) {
+      sendMessage(e.toString());
+    }
   }
 }
 
