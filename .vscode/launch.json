@@ -6,11 +6,13 @@
   "configurations": [
     {
       "type": "node",
+      "runtimeExecutable": "/root/.nvm/versions/node/v16.17.0/bin/node",
       "request": "launch",
       "name": "Launch Program",
-      "program": "${workspaceFolder}/src/main.ts",
-      "preLaunchTask": "tsc: build - tsconfig.json",
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "program": "${workspaceFolder}/build/main.js",
+      "sourceMaps": true,
+      "pauseForSourceMap": true,
+      "preLaunchTask": "tsc: build - tsconfig.json"
     }
   ]
 }

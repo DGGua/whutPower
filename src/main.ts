@@ -3,11 +3,10 @@ import * as Jimp from "jimp";
 import { charDistinguish } from "./numberIdentify";
 import "fs";
 import * as config from "./config.json";
-import dayjs from "dayjs";
 import bot from "./bot/bot";
 import { generateForm } from "./utils";
-import { buffer } from "stream/consumers";
-const axios = require("axios");
+import dayjs from "dayjs";
+import axios from "axios";
 const { whutAuth, masterqq, selfqq, meterId } = config;
 const { nickName, password } = whutAuth;
 let cookie = "";
@@ -16,15 +15,15 @@ let list = {};
 async function req(countdown: number = 10) {
   if (countdown <= 0) return Promise.reject("请求失败，请重试");
   return new Promise<Jimp>((resolve, reject) => {
-    request("http://cwsf.whut.edu.cn/authImage")
-      .on("response", (resp) => {
+    axios
+      .get("http://cwsf.whut.edu.cn/authImage", { responseType: "arraybuffer" })
+      .then(async (resp) => {
         cookie = resp.headers["set-cookie"].toString().split(";")[0];
-      })
-      .on("data", async (data) => {
         try {
-          resolve(await Jimp.read(Buffer.from(data)));
+          console.log(Buffer.from(resp.data).length);
+          resolve(await Jimp.read(Buffer.from(resp.data, "binary")));
         } catch (e) {
-          console.log(`decode image fail: ${e}`);
+          console.log(`try ${countdown} decode image fail: ${e}`);
           req(countdown - 1)
             .then((data) => resolve(data))
             .catch((reason) => reject(reason));
