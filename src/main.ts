@@ -15,18 +15,15 @@ let list = {};
 async function req(countdown: number = 10) {
   if (countdown <= 0) return Promise.reject("请求失败，请重试");
   return new Promise<Buffer>((resolve, reject) => {
-    console.log("hi");
     request("http://cwsf.whut.edu.cn/authImage")
       .on("response", (resp) => {
-        console.log(resp.headers["set-cookie"]);
         cookie = resp.headers["set-cookie"].toString().split(";")[0];
-        console.log(cookie);
       })
       .on("data", (data) => {
         if (data.toString("hex").endsWith("ffd9")) {
           resolve(Buffer.from(data));
         } else {
-          console.log("fail");
+          console.log("decode image fail");
           req(countdown - 1)
             .then((data) => resolve(data))
             .catch((reason) => reject(reason));
